@@ -21,7 +21,10 @@ import torchgeometry as tgm
 from src import eulerangles, misc_utils
 import pickle
 import json
-
+import sys
+sys.path.append('./')
+from utils.smpl_utils import pkl2smpl
+from utils.rotate_utils import GetRotFromVecs,Camera_project
 
 def batch2features(in_batch, use_semantics, **kwargs):
     in_batch = in_batch.squeeze(0)
@@ -57,43 +60,34 @@ def compute_canonical_transform(global_orient):
     R_new = torch.tensor(eulerangles.euler2mat(x, z, y, 'sxzy'), dtype=dtype, device=device)
     return torch.matmul(R_new, R_inv)
 
-
 def pkl_to_canonical(pkl_file_path, device, dtype, batch_size, gender='male', model_folder=None, vertices_clothed=None,
                      **kwargs):
     R_can = torch.tensor(eulerangles.euler2mat(np.pi, np.pi, 0, 'syzx'), dtype=dtype, device=device)
     R_smpl2scene = torch.tensor(eulerangles.euler2mat(np.pi / 2, 0, 0, 'sxyz'), dtype=dtype, device=device)
-    with open(pkl_file_path, 'rb') as f:
-        param = pickle.load(f)
-    num_pca_comps = 6
-    body_model = misc_utils.load_body_model(model_folder, num_pca_comps, batch_size, param['gender']).to(device)
-    body_param_list = [name for name, _ in body_model.named_parameters()]
+    
+    vs,js,fs = pkl2smpl(
+        pkl_file_path,
+        mode='smplx'
+        )
+    vsOld = vs.copy()
+    ## PROX数据集旋转处理
+    v = js[1] - js[2]
+    v[1] = 0
+    vn = np.array([1,0,0])
+    Rotm = GetRotFromVecs(v,vn)
+    vs = Camera_project(
+        vs-js[0],
+        np.vstack((np.hstack((Rotm,np.zeros((3,1)))),np.array([[0,0,0,1]])))
+        )
+    vs += js[0]
+    
+    pelvis = torch.tensor(js[0], dtype=dtype, device=device).reshape(1,3)
+    vertices = torch.tensor(vs, dtype=dtype, device=device)
 
-    torch_param = {}
-    for key in param.keys():
-        if key in body_param_list:
-            torch_param[key] = torch.tensor(param[key], dtype=torch.float32).to(device)
+    vertices_can = torch.matmul(R_can, (vertices - pelvis).t()).t() ## 根节点平移到 原点，转换到了git上的展示图方向，坐标轴对齐转换
+    vertices = torch.matmul(R_smpl2scene, (vertices - pelvis).t()).t() ## 根节点平移到 原点，转换到了git上的展示图方向，坐标轴对齐转换
 
-    torch_param['betas'] = torch_param['betas'][:, :10]
-
-    torch_param['left_hand_pose'] = torch_param['left_hand_pose'][:, :num_pca_comps]
-    torch_param['right_hand_pose'] = torch_param['right_hand_pose'][:, :num_pca_comps]
-
-    faces_arr = body_model.faces
-    body_model.reset_params(**torch_param)
-    body_model_output = body_model(return_verts=True)
-    pelvis = body_model_output.joints[:, 0, :].reshape(1, 3)
-
-    vertices = body_model_output.vertices.squeeze()
-    vertices_can = torch.matmul(R_can, (vertices - pelvis).t()).t()
-    vertices = torch.matmul(R_smpl2scene, (vertices - pelvis).t()).t()
-
-    if vertices_clothed is not None:
-        vertices_clothed /= 100
-        vertices_clothed -= np.mean(vertices_clothed, axis=0)
-        vertices_clothed = torch.tensor(vertices_clothed, dtype=dtype, device=device)
-        vertices_clothed = torch.matmul(R_smpl2scene, (vertices_clothed - pelvis).t()).t()
-
-    return vertices, vertices_can, faces_arr, body_model, R_can, pelvis, torch_param, vertices_clothed
+    return vertices, vertices_can, fs-1, vsOld
 
 
 def load_scene_data(device, name, sdf_dir, use_semantics, no_obj_classes, **kwargs):

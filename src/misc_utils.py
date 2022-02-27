@@ -23,7 +23,8 @@ from src import misc_utils
 import src.posa_models as models
 import smplx
 import cv2
-
+import os
+os.environ['POSA_dir'] = R'H:\YangYuan\Code\phy_program\test\POSA\POSA_dir'
 
 def read_sdf(vertices, sdf_grid, grid_dim, grid_min, grid_max, mode='bilinear'):
     assert vertices.dim() == 3

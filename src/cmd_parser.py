@@ -16,7 +16,6 @@
 
 import configargparse
 
-
 def parse_config():
     arg_formatter = configargparse.ArgumentDefaultsHelpFormatter
     cfg_parser = configargparse.YAMLConfigFileParser
@@ -99,7 +98,7 @@ def parse_config():
                              'model')
     parser.add_argument('--scene_name', type=str, default='')
     parser.add_argument('--num_init_points', type=int, default=3)
-    parser.add_argument('--num_rand_samples', type=int, default=3)
+    parser.add_argument('--num_rand_samples', type=int, default=1)
     parser.add_argument('--contact_threshold', type=float, default=0.05)
     parser.add_argument('--trunc_val', type=float, default=0.5)
     parser.add_argument('--show_contact', default=False, type=lambda x: x.lower() in ['true', '1'])

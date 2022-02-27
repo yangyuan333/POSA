@@ -156,7 +156,7 @@ def render_interaction_snapshot(body, static_scene, clothed_body, use_clothed_me
 def render_multi_view(vertices, faces_arr, vertex_colors, camera_pose, renderer, camera, light_directional, light_point,
                       material, num_views=4):
     images = []
-    for view_id, rot in enumerate(view_rotations[:num_views]):
+    for view_id, rot in enumerate(view_rotations[:num_views]): # 轴角表示
         scene = create_pyrender_scene(camera, np.matmul(rot, camera_pose), light_directional, light_point)
         color = render_body(scene, renderer, vertices=vertices, faces_arr=faces_arr, vertex_colors=vertex_colors,
                             material=material)
@@ -174,7 +174,7 @@ def render_sample(in_batch, vertices, faces_arr, use_semantics=False, make_colla
     vertices = vertices.squeeze()
     if torch.is_tensor(vertices):
         vertices = vertices.detach().cpu().numpy()
-    vertices -= (vertices.max(axis=0) + vertices.min(axis=0)) / 2.0
+    vertices -= (vertices.max(axis=0) + vertices.min(axis=0)) / 2.0 ## 使人体的最小包围盒的中点移动到原点
     camera_pose = np.eye(4)
     camera_pose[1, 3] = -1.5
     camera_pose[:3, :3] = eulerangles.euler2mat(0, 0, np.pi / 2, 'szyx')
@@ -285,7 +285,7 @@ def show_sample(vertices, in_batch, faces_arr, use_semantics, make_canonical=Tru
     x_mesh = show_contact_fn(vertices, x, faces_arr, **kwargs)
     results += x_mesh
     if use_shift:
-        shift += 2.0
+        shift += 2.0 ## 让contact接触和smantics语义显示分离
 
     if use_semantics:
         if use_shift:
@@ -311,7 +311,7 @@ def get_semantics_color_coding():
     matter_port_label_filename = './mpcat40.tsv'
     matter_port_label_filename = osp.expandvars(matter_port_label_filename)
     df = pd.read_csv(matter_port_label_filename, sep='\t')
-    color_coding_hex = list(df['hex'])  # list of str
+    color_coding_hex = list(df['hex'])  # list of str ## 42个类别的颜色编码
     color_coding_rgb = hex2rgb(color_coding_hex)
     return color_coding_rgb
 
