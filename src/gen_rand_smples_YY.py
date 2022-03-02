@@ -63,11 +63,11 @@ def buildModel(args, args_dict):
     faces_arr = trimesh.load(os.path.join(ds_us_dir, 'mesh_{}.obj'.format(0)), process=False).faces
 
     model = misc_utils.load_model_checkpoint(device=device, **args_dict).to(device)
-    
+
     return model, down_sample_fn, up_sample_fn, down_sample_fn2, up_sample_fn2
 
 def forward(pklPath,args,args_dict,model,down_sample_fn,down_sample_fn2,up_sample_fn,up_sample_fn2):
-    pkl_file_basename = os.path.splitext(os.path.basename(pklPath))[0]
+    # pkl_file_basename = os.path.splitext(os.path.basename(pklPath))[0]
     device = torch.device("cuda" if args_dict.get('use_cuda') else "cpu")
     dtype = torch.float32
     # load pkl file
@@ -76,7 +76,10 @@ def forward(pklPath,args,args_dict,model,down_sample_fn,down_sample_fn2,up_sampl
     vertices_can_ds = down_sample_fn.forward(vertices_can.unsqueeze(0).permute(0, 2, 1))
     vertices_can_ds = down_sample_fn2.forward(vertices_can_ds).permute(0, 2, 1).squeeze()
     ## 隐空间变量z，待优化变量
-    z = torch.tensor(np.random.normal(0, 1, (args.num_rand_samples, args.z_dim)).astype(np.float32)).to(device)
+    zz = np.random.normal(0, 1, (args.num_rand_samples, args.z_dim)).astype(np.float32)
+    z = torch.tensor(zz).to(device)
+    np.savetxt('./contact_optim/z.txt',zz)
+    ## z = torch.tensor(np.zeros((1,256)).astype(np.float32)).to(device)
     gen_batch = model.decoder(z, vertices_can_ds.expand(args.num_rand_samples, -1, -1))
 
     gen_batch = gen_batch.transpose(1, 2)
@@ -97,27 +100,11 @@ def forward(pklPath,args,args_dict,model,down_sample_fn,down_sample_fn2,up_sampl
     meshData.color = vertex_colors
     write_obj('POSA.obj', meshData)
 
-    # if args.viz:
-    #     results = []
-    #     for i in range(args.num_rand_samples):
-    #         gen = viz_utils.show_sample(vertices_can, gen_batch[i], faces_arr, **args_dict)
-    #         for m in gen:
-    #             trans = np.eye(4)
-    #             trans[1, 3] = 2 * i ## 让三个mesh在y轴方向上分离
-    #             m.transform(trans)
-    #             results.append(m)
-    #     o3d.visualization.draw_geometries(results)
-    # if args.render:
-    #     gen_batch = gen_batch.detach().cpu().numpy()
-    #     img = viz_utils.render_sample(gen_batch, vertices, faces_arr, **args_dict)
-    #     for i in range(args.num_rand_samples):
-    #         img[i].save(os.path.join(rand_samples_dir, '{}_sample_{:02d}.png'.format(pkl_file_basename, i)))
-
 if __name__ == '__main__':
     args, args_dict = configInit()
     model, down_sample_fn, up_sample_fn, down_sample_fn2, up_sample_fn2 = buildModel(args, args_dict)
     forward(
-        R'H:\YangYuan\项目资料\人物交互\dataset\PROX\prox_quantiative_dataset\fittings\mosh\vicon_03301_01\results\s001_frame_00001__00.00.00.023\smplx\000_final.pkl',
+        R'H:\YangYuan\ProjectData\HumanObject\dataset\PROX\prox_quantiative_dataset\fittings\mosh\vicon_03301_01\results\s006_frame_00001__00.00.00.009\smplx\000_vcl.pkl',
         args,
         args_dict,
         model, down_sample_fn, down_sample_fn2, up_sample_fn, up_sample_fn2)

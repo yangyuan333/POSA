@@ -141,6 +141,7 @@ def load_model_checkpoint(device, model_name='POSA', load_checkpoint=None, use_c
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
         print('No checkpoint found')
+        import sys
         sys.exit(0)
     return model
 
