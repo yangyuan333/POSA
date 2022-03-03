@@ -104,7 +104,7 @@ if __name__ == '__main__':
     args, args_dict = configInit()
     model, down_sample_fn, up_sample_fn, down_sample_fn2, up_sample_fn2 = buildModel(args, args_dict)
     forward(
-        R'H:\YangYuan\ProjectData\HumanObject\dataset\PROX\prox_quantiative_dataset\fittings\mosh\vicon_03301_01\results\s006_frame_00001__00.00.00.009\smplx\000_vcl.pkl',
+        R'H:\YangYuan\ProjectData\HumanObject\dataset\PROX\prox_quantiative_dataset\fittings\mosh\vicon_03301_03\results\s007_frame_00001__00.00.00.009\smplx\000_vcl.pkl',
         args,
         args_dict,
         model, down_sample_fn, down_sample_fn2, up_sample_fn, up_sample_fn2)
